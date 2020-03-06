@@ -86,7 +86,7 @@ interface RemoteDataLayer {
 export class MapController {
   _map: Map | undefined;
   _mapview: MapView;
-  _sketchVM: SketchViewModel | undefined;
+  _sketchVM: any; //SketchViewModel | undefined;
   _previousSketchGraphic: any;
   _mouseClickEventListener: EventListener | any;
   _pointerMoveEventListener: EventListener | any;
@@ -527,7 +527,6 @@ export class MapController {
   }
 
   listenToSketchUpdate(event: any): void {
-    console.log('event', event);
     if (
       this._sketchVM &&
       event.toolEventInfo &&
@@ -543,18 +542,52 @@ export class MapController {
         graphic.symbol.color = [0, 0, 0, 0];
       });
 
-      this._previousSketchGraphic = event.graphics;
-      this._sketchVMGraphicsLayer.graphics = event.graphics; // * NEW!
-      this._mapview.graphics.addMany(this._previousSketchGraphic);
-      this._sketchVM.layer.graphics.add(event.graphics); // * NEW!
+      // this._mapview.graphics.remove(this._previousSketchGraphic); // * Didn't work!
+      // this._previousSketchGraphic = event.graphics;
+      // this._sketchVMGraphicsLayer.graphics = event.graphics; // * NEW!
+      // this._mapview.graphics.addMany(this._previousSketchGraphic);
+      // this._sketchVM.layer.graphics.add(event.graphics); // * NEW!
 
       console.log('this._sketchVM', this._sketchVM);
+      this._sketchVMGraphicsLayer = event.graphics;
 
       this._sketchVM?.update(event.graphics, {
         tool: 'reshape',
         enableRotation: false,
         toggleToolOnClick: false
       });
+    }
+  }
+
+  listenToSketchCreate(event: any): void {
+    if (event.state === 'complete') {
+      const eventGraphic = event.graphic.clone();
+
+      eventGraphic.attributes = {
+        OBJECTID: eventGraphic.uid
+      };
+
+      eventGraphic.symbol.outline.color = [115, 252, 253];
+      eventGraphic.symbol.color = [0, 0, 0, 0];
+
+      // this._previousSketchGraphic = eventGraphic;
+      eventGraphic.attributes.isSketch = true; // * NEW!
+
+      this._sketchVMGraphicsLayer = eventGraphic.geometry;
+
+      // this._mapview.graphics.add(eventGraphic);
+
+      //Replace all active features with our drawn feature, assigning custom layerID and Title
+      const drawnFeatures: LayerFeatureResult = {
+        layerID: 'user_features',
+        layerTitle: 'User Features',
+        sublayerID: null,
+        sublayerTitle: null,
+        features: [eventGraphic]
+      };
+
+      store.dispatch(setActiveFeatures([drawnFeatures]));
+      store.dispatch(selectActiveTab('analysis'));
     }
   }
 
@@ -582,41 +615,16 @@ export class MapController {
     });
 
     this._sketchVM?.on('create', (event: any) => {
-      if (event.state === 'complete') {
-        const eventGraphic = event.graphic.clone();
-
-        eventGraphic.attributes = {
-          OBJECTID: eventGraphic.uid
-        };
-
-        eventGraphic.symbol.outline.color = [115, 252, 253];
-        eventGraphic.symbol.color = [0, 0, 0, 0];
-
-        this._previousSketchGraphic = eventGraphic;
-        eventGraphic.attributes.isSketch = true; // * NEW!
-
-        this._mapview.graphics.add(eventGraphic);
-
-        //Replace all active features with our drawn feature, assigning custom layerID and Title
-        const drawnFeatures: LayerFeatureResult = {
-          layerID: 'user_features',
-          layerTitle: 'User Features',
-          sublayerID: null,
-          sublayerTitle: null,
-          features: [eventGraphic]
-        };
-
-        store.dispatch(setActiveFeatures([drawnFeatures]));
-        store.dispatch(selectActiveTab('analysis'));
-      }
+      this.listenToSketchCreate(event);
     });
   }
 
   updateSketchVM(): any {
     if (this._sketchVM && this._map) {
-      this._sketchVM.layer.graphics = this._previousSketchGraphic;
+      // this._sketchVM.layer.graphics = this._previousSketchGraphic;
+      this._sketchVM.layer = this._sketchVMGraphicsLayer;
 
-      this._sketchVM?.update(this._previousSketchGraphic, {
+      this._sketchVM?.update(this._sketchVM.layer, {
         tool: 'reshape',
         enableRotation: false,
         toggleToolOnClick: false,
@@ -634,7 +642,10 @@ export class MapController {
   }
 
   createPolygonSketch = (): void => {
-    this._mapview.graphics.remove(this._previousSketchGraphic);
+    // this._mapview.graphics.remove(this._previousSketchGraphic);
+    // this._mapview.graphics.items
+    // this._sketchVMGraphicsLayer.removeAll(); // * NOT working!
+
     this._sketchVM?.create('polygon', { mode: 'click' });
   };
 

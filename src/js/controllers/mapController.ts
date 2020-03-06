@@ -40,7 +40,7 @@ import { LayerProps, LayerFeatureResult } from 'js/store/mapview/types';
 import { OptionType } from 'js/interfaces/measureWidget';
 
 import { LayerFactoryObject } from 'js/interfaces/mapping';
-import { addPopupWatchUtils } from 'js/helpers/DataPanel';
+import { queryLayersForFeatures } from 'js/helpers/DataPanel';
 
 import { createAndAddNewGraphic } from 'js/helpers/MapGraphics';
 
@@ -130,6 +130,8 @@ export class MapController {
       .when(
         () => {
           store.dispatch(isMapReady(true));
+          //Set default language
+          store.dispatch(setLanguage(appSettings.language));
           this._mapview.popup.highlightEnabled = false;
           this._mapview.on('click', event => {
             //TODO: We need a better loading handling, probably a spinner!
@@ -137,10 +139,8 @@ export class MapController {
             store.dispatch(setActiveFeatures([]));
             store.dispatch(setActiveFeatureIndex([0, 0]));
             store.dispatch(selectActiveTab('data'));
-            addPopupWatchUtils(this._mapview, this._map, event.mapPoint);
+            queryLayersForFeatures(this._mapview, this._map, event);
           });
-
-          //Setup popup related watches to be used in data panel
 
           const mapLayerObjects: LayerProps[] = [];
           this._map?.layers.forEach((layer: any) => {
@@ -340,7 +340,8 @@ export class MapController {
       store
         .getState()
         .mapviewState.allAvailableLayers.filter(availableLayer => {
-          return availableLayer.group !== 'webmap';
+          //TODO: doing additional check for title existnce this is to do with graphics layers that do not get flushed when lang changes, need better solution
+          return availableLayer.group !== 'webmap' && availableLayer.title;
         })
         .forEach(resourceLayer => {
           if (this._map) {

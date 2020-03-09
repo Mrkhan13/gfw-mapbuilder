@@ -15,6 +15,13 @@
   .info-content-container {
     display: flex;
     min-height: 5rem;
+    font-family: $fira-sans;
+    font-size: 0.875rem;
+    padding: 1rem;
+
+    p {
+      line-height: 1.5rem;
+    }
   }
 
   .analysis-tab-container {
@@ -96,6 +103,7 @@
   }
 }
 
+.info-content-container,
 .tabview-container {
   height: 600px;
   color: $dark-grey;
@@ -270,9 +278,11 @@
   flex-direction: column;
   align-items: center;
   font-family: $fira-sans;
+  padding: 1rem;
 
   figure {
     margin-bottom: 0;
+    margin-left: 0;
     font-size: 0.85rem;
 
     figcaption {
